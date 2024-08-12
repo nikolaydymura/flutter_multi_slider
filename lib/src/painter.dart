@@ -16,6 +16,7 @@ class _MultiSliderPainter extends CustomPainter {
   final TextDirection textDirection;
   final double textHeightOffset;
   final Color thumbColor;
+  final Axis direction;
 
   _MultiSliderPainter({
     required this.values,
@@ -33,13 +34,17 @@ class _MultiSliderPainter extends CustomPainter {
     required this.textHeightOffset,
     required this.thumbBuilder,
     required this.thumbColor,
+    required this.direction,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final double baseLine = size.height / 2;
+    final double baseLine =
+        direction == Axis.horizontal ? size.height / 2 : size.width / 2;
     final canvasStart = horizontalPadding;
-    final canvasEnd = size.width - horizontalPadding;
+    final canvasEnd = direction == Axis.horizontal
+        ? size.width
+        : size.height - horizontalPadding;
 
     List<ValueRange> makeRanges(
       List<double> innerValues,
@@ -73,7 +78,7 @@ class _MultiSliderPainter extends CustomPainter {
     final lastDot = trackbarBuilder(valueRanges.last);
     canvas.drawArc(
       Rect.fromCircle(
-        center: Offset(valueRanges.first.start, baseLine),
+        center: Offset(valueRanges.first.start, baseLine).withDirection(direction, size),
         radius: fistDot.size! / 2,
       ),
       math.pi / 2,
@@ -84,7 +89,7 @@ class _MultiSliderPainter extends CustomPainter {
 
     canvas.drawArc(
       Rect.fromCircle(
-        center: Offset(valueRanges.last.end, baseLine),
+        center: Offset(valueRanges.last.end, baseLine).withDirection(direction, size),
         radius: lastDot.size! / 2,
       ),
       -math.pi / 2,
@@ -98,8 +103,8 @@ class _MultiSliderPainter extends CustomPainter {
       final Paint rangePaint = _paintFromColor(v.color!, v.size!);
 
       canvas.drawLine(
-        Offset(valueRange.start, baseLine),
-        Offset(valueRange.end, baseLine),
+        Offset(valueRange.start, baseLine).withDirection(direction ,size),
+        Offset(valueRange.end, baseLine).withDirection(direction, size),
         rangePaint,
       );
     }
@@ -142,7 +147,7 @@ class _MultiSliderPainter extends CustomPainter {
 
       if (isSelected) {
         canvas.drawCircle(
-          Offset(x, baseLine),
+          Offset(x, baseLine).withDirection(direction, size),
           thumbOptions.radius! + 10,
           _paintFromColor(thumbOptions.color!.withOpacity(0.25)),
         );
@@ -155,27 +160,16 @@ class _MultiSliderPainter extends CustomPainter {
         f = indicator!(thumbValue);
       }
 
-      if (f != null && f.draw) {
-        textPainter
-          ..text = TextSpan(text: f.formatter(values[i]), style: f.style)
-          ..layout()
-          ..paint(
-            canvas,
-            Offset(
-              x - textPainter.width / 2,
-              baseLine - thumbOptions.radius! - textHeightOffset,
-            ),
-          );
-      }
-
       // Draw thumb
-      Path path = Path();
-      path.addOval(
-        Rect.fromCircle(
-          center: Offset(x, baseLine),
-          radius: thumbOptions.radius!,
-        ),
-      );
+      final center = Offset(x, baseLine).withDirection(direction, size);
+      Path path = thumbOptions.pathBuilder?.call(center, size) ?? Path()
+        ..addOval(
+          Rect.fromCircle(
+            center: center,
+            radius: thumbOptions.radius!,
+          ),
+        );
+
       if (thumbOptions.elevation! > 0) {
         canvas.drawShadow(path, Colors.black, thumbOptions.elevation!, true);
       }
@@ -186,6 +180,20 @@ class _MultiSliderPainter extends CustomPainter {
           activeTrackSize,
         ),
       );
+
+      if (f != null && f.draw) {
+        textPainter
+          ..text = TextSpan(text: f.formatter(values[i]), style: f.style)
+          ..layout();
+        final pos = Offset(
+          x - textPainter.width / 2,
+          baseLine - thumbOptions.radius! - textHeightOffset,
+        ).withDirection(direction, size);
+        textPainter.paint(
+            canvas,
+            f.offsetShifter?.call(pos) ?? pos,
+          );
+      }
     }
   }
 
@@ -201,6 +209,12 @@ class _MultiSliderPainter extends CustomPainter {
   }
 }
 
+extension on Offset {
+  Offset withDirection(Axis direction, Size size) {
+    return direction == Axis.horizontal ? this : Offset(dy, size.height - dx);
+  }
+}
+
 double _getDiscreteValue(
   double value,
   double start,
@@ -208,5 +222,6 @@ double _getDiscreteValue(
   int divisions,
 ) {
   final k = (end - start) / divisions;
-  return start + ((value - start) / k).roundToDouble() * k;
+  final result = start + ((value - start) / k).roundToDouble() * k;
+  return math.min(math.max(result, start), end);
 }

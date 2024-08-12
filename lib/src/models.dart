@@ -30,6 +30,7 @@ class IndicatorOptions {
     this.formatter = defaultFormatter,
     this.style,
     this.draw = true,
+    this.offsetShifter,
   });
 
   /// Used to define how [value] will be formatted.
@@ -40,6 +41,7 @@ class IndicatorOptions {
 
   /// Use to choose if indicator will be drawn or not.
   final bool draw;
+  final Offset Function(Offset)? offsetShifter;
 
   static String defaultFormatter(double value) => value.toStringAsPrecision(2);
 
@@ -47,11 +49,13 @@ class IndicatorOptions {
     String Function(double value)? formatter,
     TextStyle? style,
     bool? draw,
+    Offset Function(Offset)? offsetShifter,
   }) =>
       IndicatorOptions(
         formatter: formatter ?? this.formatter,
         style: style ?? this.style,
         draw: draw ?? this.draw,
+        offsetShifter: offsetShifter ?? this.offsetShifter,
       );
 }
 
@@ -88,6 +92,7 @@ class ThumbOptions {
     this.radius,
     this.color,
     this.elevation,
+    this.pathBuilder,
   });
 
   final double? radius;
@@ -95,4 +100,6 @@ class ThumbOptions {
   final Color? color;
 
   final double? elevation;
+
+  final Path Function(Offset, Size)? pathBuilder;
 }

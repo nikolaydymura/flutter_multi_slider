@@ -24,6 +24,7 @@ class MultiSlider extends StatefulWidget {
     this.trackbarBuilder = defaultTrackbarBuilder,
     this.textDirection = TextDirection.ltr,
     this.textHeightOffset = 30,
+    this.direction = Axis.horizontal,
     Key? key,
   })  : range = max - min,
         assert(values.length != 0),
@@ -113,6 +114,8 @@ class MultiSlider extends StatefulWidget {
   /// individually.
   final ThumbBuilder thumbBuilder;
 
+  final Axis direction;
+
   static IndicatorOptions defaultIndicator(ThumbValue value) {
     return const IndicatorOptions();
   }
@@ -130,7 +133,7 @@ class MultiSlider extends StatefulWidget {
 }
 
 class _MultiSliderState extends State<MultiSlider> {
-  late double _maxWidth;
+  late double _maxLength;
   late ThemeData _theme;
   late SliderThemeData _sliderTheme;
 
@@ -157,6 +160,7 @@ class _MultiSliderState extends State<MultiSlider> {
           draw: currentValue.draw,
           formatter: currentValue.formatter,
           style: indicatorTextTheme?.copyFromOther(currentValue.style),
+          offsetShifter: currentValue.offsetShifter,
         );
       };
     }
@@ -167,6 +171,7 @@ class _MultiSliderState extends State<MultiSlider> {
           draw: currentValue.draw,
           formatter: currentValue.formatter,
           style: selectedIndicatorTextTheme?.copyFromOther(currentValue.style),
+          offsetShifter: currentValue.offsetShifter
         );
       };
     }
@@ -229,12 +234,13 @@ class _MultiSliderState extends State<MultiSlider> {
         color: currentValue.color ?? thumbColor,
         elevation: currentValue.elevation ?? (value.isSelected ? 3 : 0),
         radius: currentValue.radius ?? widget.thumbRadius,
+        pathBuilder: currentValue.pathBuilder,
       );
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        _maxWidth = constraints.maxWidth;
+        _maxLength = widget.direction == Axis.horizontal ? constraints.maxWidth : constraints.maxHeight;
         return GestureDetector(
           onPanDown: isDisabled ? null : _onPanDown,
           onPanUpdate: isDisabled ? null : _handleOnChanged,
@@ -260,6 +266,7 @@ class _MultiSliderState extends State<MultiSlider> {
                 textHeightOffset: widget.textHeightOffset,
                 thumbBuilder: thumbBuilder,
                 thumbColor: thumbColor,
+                direction: widget.direction,
                 positions: widget.values //
                     .map(_convertValueToPixelPosition)
                     .toList(),
@@ -273,20 +280,20 @@ class _MultiSliderState extends State<MultiSlider> {
 
   void _onPanDown(DragDownDetails details) {
     double valuePosition = _convertPixelPositionToValue(
-      details.localPosition.dx,
+      widget.direction == Axis.horizontal ? details.localPosition.dx : _maxLength - details.localPosition.dy,
     );
 
     int index = findNearestValueIndex(valuePosition, widget.values);
 
     setState(() => _selectedInputIndex = index);
 
-    final updatedValues = updateInternalValues(details.localPosition.dx);
+    final updatedValues = updateInternalValues(widget.direction == Axis.horizontal ? details.localPosition.dx : _maxLength - details.localPosition.dy);
     widget.onChanged!(updatedValues);
     widget.onChangeStart?.call(updatedValues);
   }
 
   void _handleOnChanged(DragUpdateDetails details) {
-    widget.onChanged!(updateInternalValues(details.localPosition.dx));
+    widget.onChanged!(updateInternalValues(widget.direction == Axis.horizontal ? details.localPosition.dx : _maxLength - details.localPosition.dy));
   }
 
   void _handleOnChangeEnd() {
@@ -297,7 +304,7 @@ class _MultiSliderState extends State<MultiSlider> {
 
   double _convertValueToPixelPosition(double value) {
     return (value - widget.min) * //
-            (_maxWidth - 2 * widget.horizontalPadding) /
+            (_maxLength - 2 * widget.horizontalPadding) /
             (widget.range) +
         widget.horizontalPadding;
   }
@@ -305,7 +312,7 @@ class _MultiSliderState extends State<MultiSlider> {
   double _convertPixelPositionToValue(double pixelPosition) {
     final value = (pixelPosition - widget.horizontalPadding) * //
             (widget.range) /
-            (_maxWidth - 2 * widget.horizontalPadding) +
+            (_maxLength - 2 * widget.horizontalPadding) +
         widget.min;
 
     return value;
