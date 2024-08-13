@@ -145,10 +145,17 @@ class _MultiSliderPainter extends CustomPainter {
           ? positions[i]
           : _getDiscreteValue(positions[i], canvasStart, canvasEnd, divisions!);
 
+      final center = Offset(x, baseLine).withDirection(direction, size);
       if (isSelected) {
-        canvas.drawCircle(
-          Offset(x, baseLine).withDirection(direction, size),
-          thumbOptions.radius! + 10,
+        Path path = thumbOptions.pathBuilder?.call(center, true) ?? (Path()
+          ..addOval(
+            Rect.fromCircle(
+              center: center,
+              radius: thumbOptions.radius! + 10,
+            ),
+          ));
+        canvas.drawPath(
+          path,
           _paintFromColor(thumbOptions.color!.withOpacity(0.25)),
         );
       }
@@ -161,14 +168,13 @@ class _MultiSliderPainter extends CustomPainter {
       }
 
       // Draw thumb
-      final center = Offset(x, baseLine).withDirection(direction, size);
-      Path path = thumbOptions.pathBuilder?.call(center, size) ?? Path()
+      Path path = thumbOptions.pathBuilder?.call(center, false) ?? (Path()
         ..addOval(
           Rect.fromCircle(
             center: center,
             radius: thumbOptions.radius!,
           ),
-        );
+        ));
 
       if (thumbOptions.elevation! > 0) {
         canvas.drawShadow(path, Colors.black, thumbOptions.elevation!, true);

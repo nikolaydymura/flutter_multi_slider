@@ -101,5 +101,5 @@ class ThumbOptions {
 
   final double? elevation;
 
-  final Path Function(Offset, Size)? pathBuilder;
+  final Path Function(Offset, bool)? pathBuilder;
 }
